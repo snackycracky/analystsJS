@@ -4,6 +4,7 @@ var http = require("http"),
         analyseParser = require("./analyseParser.js");
 
 var bucketName = "anlystOpinions";
+var db = require('riak-js').getClient({host:"127.0.0.1", port:"8098"})
 
 function get_feeds(pageNr) {
 
@@ -27,23 +28,31 @@ function get_feeds(pageNr) {
             var arrMatches = body.match(rePattern);
 
             arrMatches.forEach(function (link) {
-                analyseParser.get_analyse(link.replace("\"", ""));
+                async_function(true, function (val) {
+                    var ident = link.match(new RegExp(/-([0-9])*/g))[1].replace("-", "")
+
+                    db.get('analystsOpinions', ident, function (err, entry, meta) {
+                        if (entry == undefined) {
+                            analyseParser.get_analyse(link.replace("\"", ""));
+                        }
+                    });
+                });
             });
         });
+
     });
-    return ""
 }
 //
-//var async_function = function (val, callback) {
-//    process.nextTick(function () {
-//        callback(val);
-//    });
-//};
+var async_function = function (val, callback) {
+    process.nextTick(function () {
+        callback(val);
+    });
+};
 
 
-for (var i = 1; i < 4; i++) {
-    get_feeds(i )
+for (var i = 1; i < 3629; i++) {
+    get_feeds(i)
     console.log("going to next i " + i)
 }
 
-
+db.count('analystsOpinions')
