@@ -1,43 +1,49 @@
 var http = require("http"),
-        events = require("events"),
         rss_client = http.createClient(80, "aktiencheck.de"),
-        xml2js = require('xml2js');
+        xml2js = require('xml2js'),
+        analyseParser = require("./analyseParser.js");
 
-var rssItems_emitter = new events.EventEmitter();
+var bucketName = "anlystOpinions";
 
-function get_feeds() {
+function get_feeds(pageNr) {
 
-    console.log("making request now");
-    var req = rss_client.request("GET", "/rss/analysen.rss2");
+
+    var req = rss_client.request("GET", "/analysen/DAX_MDAX?page=" + pageNr);
     req.end();
 
-    console.log("request sent");
     req.on('response', function (response) {
 
-        console.log("response recieved");
         response.setEncoding("utf8");
-
 
         var body = "";
         response.addListener("data", function (data) {
             body += data;
         });
 
-        response.addListener("end", function () {
-            console.log("parsing response now")
-            var parser = new xml2js.Parser();
-            parser.addListener('end', function (result) {
+        response.addListener("end", function (data) {
 
-                result.channel.item.forEach(function (item) {
-                    console.log(item.title)
-                })
+            var rePattern = new RegExp(/\/analysen\/Artikel(.*)[0-9]"/g);
 
-                console.log('Done.');
+            var arrMatches = body.match(rePattern);
+
+            arrMatches.forEach(function (link) {
+                analyseParser.get_analyse(link.replace("\"", ""));
             });
-            parser.parseString(body);
-
         });
     });
+    return ""
 }
-get_feeds();
-//setInterval(get_feeds, 100000);
+//
+//var async_function = function (val, callback) {
+//    process.nextTick(function () {
+//        callback(val);
+//    });
+//};
+
+
+for (var i = 1; i < 4; i++) {
+    get_feeds(i )
+    console.log("going to next i " + i)
+}
+
+
